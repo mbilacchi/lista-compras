@@ -1,22 +1,25 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../hooks/useAuth'
 import { Lista, ListaItem, UNIDADES } from '../types'
 import FormAdicionarItem from '../components/FormAdicionarItem'
 import ListaItens from '../components/ListaItens'
 import SugestaoItensAntigos from '../components/SugestaoItensAntigos'
+import ShareModal from '../components/ShareModal'
 import { obterUltimaLista, obterItensLista, copiarItensDoPassado } from '../lib/obterUltimaLista'
 
 export default function CriadorLista() {
   const { listaId } = useParams<{ listaId: string }>()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [lista, setLista] = useState<Lista | null>(null)
   const [itens, setItens] = useState<ListaItem[]>([])
   const [carregando, setCarregando] = useState(true)
-  const [linkCopiado, setLinkCopiado] = useState(false)
   const [itensSugeridos, setItensSugeridos] = useState<ListaItem[]>([])
   const [mostrarSugestao, setMostrarSugestao] = useState(false)
   const [restaurando, setRestaurando] = useState(false)
+  const [mostrarShareModal, setMostrarShareModal] = useState(false)
 
   useEffect(() => {
     carregarLista()
@@ -43,6 +46,14 @@ export default function CriadorLista() {
         .single()
 
       if (error) throw error
+
+      // Validar que o usuário logado é o criador
+      if (user && data.criador_id && user.id !== data.criador_id) {
+        console.error('Usuário não é o criador desta lista')
+        navigate('/')
+        return
+      }
+
       setLista(data)
       await carregarItens()
 
@@ -114,12 +125,6 @@ export default function CriadorLista() {
     }
   }
 
-  const copiarLink = () => {
-    const link = `${window.location.origin}/#/comprador/${listaId}`
-    navigator.clipboard.writeText(link)
-    setLinkCopiado(true)
-    setTimeout(() => setLinkCopiado(false), 2000)
-  }
 
   const handleRestaurarSugestoes = async () => {
     setRestaurando(true)
@@ -190,14 +195,10 @@ export default function CriadorLista() {
               Compartilhar com o comprador:
             </p>
             <button
-              onClick={copiarLink}
-              className={`w-full py-3 px-4 rounded-lg font-semibold transition ${
-                linkCopiado
-                  ? 'bg-green-600 text-white'
-                  : 'bg-white border-2 border-green-600 text-green-600 hover:bg-green-50'
-              }`}
+              onClick={() => setMostrarShareModal(true)}
+              className="w-full py-3 px-4 rounded-lg font-semibold transition bg-white border-2 border-green-600 text-green-600 hover:bg-green-50"
             >
-              {linkCopiado ? '✓ Link copiado!' : '📋 Copiar link do comprador'}
+              📋 Compartilhar com Comprador
             </button>
           </div>
         </div>
@@ -238,6 +239,14 @@ export default function CriadorLista() {
             <p className="text-gray-400 text-lg">Nenhum item adicionado ainda</p>
             <p className="text-gray-400 text-sm">Use o formulário acima para começar</p>
           </div>
+        )}
+
+        {/* Modal de Compartilhamento */}
+        {mostrarShareModal && (
+          <ShareModal
+            listaId={listaId!}
+            onClose={() => setMostrarShareModal(false)}
+          />
         )}
       </div>
     </main>

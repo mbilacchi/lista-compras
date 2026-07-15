@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../hooks/useAuth'
+import { validateShareToken } from '../lib/auth'
 import { Lista, ListaItem, ItemFoto } from '../types'
 import CapturaFoto from '../components/CapturaFoto'
 import CampoMarcaAlternativa from '../components/CampoMarcaAlternativa'
@@ -8,7 +10,10 @@ import RelatorioFinal from '../components/RelatorioFinal'
 
 export default function CompradorLista() {
   const { listaId } = useParams<{ listaId: string }>()
+  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const token = searchParams.get('token')
   const [nomeComprador, setNomeComprador] = useState('')
   const [lista, setLista] = useState<Lista | null>(null)
   const [itens, setItens] = useState<ListaItem[]>([])
@@ -18,6 +23,36 @@ export default function CompradorLista() {
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set())
   const [erroFoto, setErroFoto] = useState<string>('')
   const [mostrarRelatorio, setMostrarRelatorio] = useState(false)
+  const [acessoNegado, setAcessoNegado] = useState(false)
+
+  // Validar acesso: se tem token, valida; se não, exige login
+  useEffect(() => {
+    const validarAcesso = async () => {
+      if (!listaId) return
+
+      // Se tem token, validar
+      if (token) {
+        try {
+          await validateShareToken(token, listaId)
+          setCarregando(false)
+          // Token válido, permite iniciar
+        } catch (err) {
+          console.error('Token inválido:', err)
+          setAcessoNegado(true)
+          setCarregando(false)
+        }
+      } else {
+        // Se não tem token, verifica se está autenticado
+        setCarregando(false)
+        if (!user) {
+          // Redireciona para login
+          setTimeout(() => navigate('/login'), 1000)
+        }
+      }
+    }
+
+    validarAcesso()
+  }, [listaId, token, user, navigate])
 
   useEffect(() => {
     if (iniciado && listaId) {
@@ -138,6 +173,23 @@ export default function CompradorLista() {
       console.error('Erro ao salvar marca alternativa:', err)
       throw err
     }
+  }
+
+  if (acessoNegado) {
+    return (
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+        <div className="max-w-sm w-full bg-white rounded-lg shadow-lg p-8">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Acesso Negado</h1>
+          <p className="text-gray-500 mb-6">O link de compartilhamento é inválido ou expirou.</p>
+          <button
+            onClick={() => navigate('/')}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition"
+          >
+            Voltar para Home
+          </button>
+        </div>
+      </main>
+    )
   }
 
   if (!iniciado) {
