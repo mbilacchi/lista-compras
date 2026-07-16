@@ -14,8 +14,10 @@ dist-ssr
 
 # Variáveis de ambiente (nunca commitar suas chaves)
 .env
-.env.*
+.env.local
+.env.*.local
 !.env.example
+!.env.production
 
 # Editor
 .vscode/*
