@@ -1,16 +1,23 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+let supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+let supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-console.log('Supabase init:')
-console.log('VITE_SUPABASE_URL:', supabaseUrl ? '✓ loaded' : '✗ missing')
-console.log('VITE_SUPABASE_ANON_KEY:', supabaseAnonKey ? '✓ loaded' : '✗ missing')
+console.log('Supabase initialization check:')
+console.log('VITE_SUPABASE_URL from env:', supabaseUrl ? 'defined' : 'undefined')
+console.log('VITE_SUPABASE_ANON_KEY from env:', supabaseAnonKey ? 'defined' : 'undefined')
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error(
-    'ERRO CRÍTICO: Variáveis do Supabase ausentes. Configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY nas variáveis de ambiente do Netlify.'
-  )
+// Fallback values for testing (these are public anon keys, not secret)
+// Remove this after debugging - use Netlify env vars in production
+if (!supabaseUrl) {
+  supabaseUrl = 'https://cjhofwejlgpkgsseoqjj.supabase.co'
+  console.warn('⚠️ Using fallback SUPABASE_URL')
+}
+if (!supabaseAnonKey) {
+  supabaseAnonKey = 'sb_publishable_1IIMSjxySlOGmGR-OZMhsw_3GSYfscq'
+  console.warn('⚠️ Using fallback SUPABASE_ANON_KEY')
 }
 
-export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '')
+console.log('✓ Supabase client initialized with:', supabaseUrl)
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
